@@ -1,1 +1,199 @@
+#########################################################################
+##                                                                     ##
+##                               VASICEK                               ##
+##                                                                     ##
+##                            By SIBI CHEIK                            ##
+#########################################################################
+
+#########################################################################
+##                            PARKAGES                                 ##
+#########################################################################
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import math as mt
+
+
+#########################################################################
+##                            FUNCTIONS                                ##
+#########################################################################
+
+class Vasicek:
+    def __init__(self, r0, T, zeta, gamma, sigma):
+        self.r0 = r0
+        self.T = T
+        self.zeta = zeta
+        self.gamma = gamma
+        self.sigma = sigma
+
+    def B(self, theta):
+        return 1 / self.zeta * (1 - np.exp(-self.gamma * theta))
+
+    def A(self, theta):
+        B = self.B(theta)
+        return (B - theta) * ((self.zeta * self.gamma - pow(self.sigma, 2) / 2) / pow(self.gamma, 2)) - pow(self.gamma,
+                                                                                                            2) * pow(B,
+                                                                                                                     2) / (
+                       4 * self.gamma)
+
+    def R(self):
+        return self.r0 * np.exp(-self.gamma * self.T) + (self.zeta / self.gamma) * (1 - np.exp(-self.gamma * self.T))
+
+    def Y(self):
+        return -(self.A(self.T) - self.r0 * self.B(self.T)) / self.T
+
+
+"""class LevenbergMarquart:
+    def __init__(self, r0, T, zeta, gamma, sigma):
+        self.r0 = r0
+        self.T = T
+        self.zeta = zeta
+        self.gamma = gamma
+        self.sigma = sigma
+
+    def Res(self, Ti):
+        return  - Vasicek(self.r0, self.T, self.zeta, self.gamma, self.sigma).Y()"""
+
+
+class Graph:
+    def __init__(self, r0, T, zeta, gamma, sigma):
+        self.r0 = r0
+        self.T = T
+        self.zeta = zeta
+        self.gamma = gamma
+        self.sigma = sigma
+
+    def CourbeHumpeShape(self):
+        y = []
+        Ti = [x for x in range(self.T)]
+        plt.figure(figsize=(12, 8))
+        plt.title("Humped Shape - Vasicek")
+        plt.xlabel("Temps (T)")
+        plt.ylabel("Yield (Y)")
+        for t in Ti[1:]:
+            y.append(Vasicek(self.r0, t, self.zeta, self.gamma, self.sigma).Y())
+        plt.plot(Ti[1:], y)
+        plt.show()
+
+    def CourbeDesTaux(self, R0):
+        Ti = [x for x in range(self.T)]
+        plt.figure(figsize=(12, 8))
+        plt.title("Interest rate curves - Vasicek")
+        plt.xlabel("Temps (T)")
+        plt.ylabel("Les taux (r0)")
+        for r in R0:
+            Rt = []
+            for t in range(self.T):
+                Rt.append(Vasicek(r, t, self.zeta, self.gamma, self.sigma).R())
+            plt.plot(Ti, Rt, label=str(r))
+        plt.legend()
+        plt.show()
+
+    """def YieldCurve(self):
+        Ti = [3 * i for i in range(1, 11)]
+        Yi_m = [0.035, 0.041, 0.0439, 0.046, 0.0484, 0.0494, 0.0507, 0.0514, 0.052, 0.0523]
+        Yi_t = [Vasicek(self.r0, t, self.zeta, self.gamma, self.sigma).Y() for t in Ti]
+        print(Ti, "\n", Yi_m, "\n", Yi_t)
+        plt.figure(figsize=(12, 8))
+        plt.title("Courbe de taux : Marché vs Théorique - Vasicek")
+        plt.plot(Ti, Yi_m, label="Marché")
+        plt.plot(Ti, Yi_t, label="Théorique")
+        plt.legend()
+        plt.show()"""
+
+
+class Surface:
+    def __init__(self, r0, T, zeta, gamma, sigma):
+        self.r0 = r0
+        self.T = T
+        self.zeta = zeta
+        self.gamma = gamma
+        self.sigma = sigma
+
+    def Yield_r_T(self, dim):
+        Ti = np.linspace(0, self.T, dim)
+        Ri = np.linspace(0, self.r0, dim)
+        Y_r_T = np.array([[0 for x in range(dim)] for x in range(dim)])
+
+        for i in range(1, dim):
+            for j in range(dim):
+                Y_r_T[i, j] = Vasicek(Ri[j], Ti[i], zeta, gamma, sigma).Y()
+
+        x, y = np.meshgrid(Ri, Ti)
+
+        fig = plt.figure(1, figsize=(12, 8))
+        axes = fig.gca(projection='3d')
+        plt.title("Surface Yield with respect to T & r0")
+        plt.ylabel("Time (T)")
+        plt.xlabel("Rate (r0)")
+        axes.plot_surface(x, y, Y_r_T)
+        plt.show()
+
+    def Yield_y_n(self, dim):  # With respect to gamma & zeta
+        gam = np.linspace(0.01, self.gamma, dim)
+        ze = np.linspace(0, self.zeta, dim)
+        Y_y_n = np.array([[0 for x in range(dim)] for x in range(dim)])
+
+        for i in range(1, dim):
+            for j in range(dim):
+                Y_y_n[i, j] = Vasicek(self.r0, self.T, ze[i], gam[j], self.sigma).Y()
+        x, y = np.meshgrid(ze, gam)
+
+        fig = plt.figure(1, figsize=(12, 8))
+        axes = fig.gca(projection='3d')
+        plt.title("Surface Yield with respect to Gamma & Zeta")
+        plt.ylabel("Zeta")
+        plt.xlabel("Gamma")
+        axes.plot_surface(x, y, Y_y_n)
+        plt.show()
+
+    def Yield_y_s(self, dim):  # With respect to gamma & sigma
+        gam = np.linspace(0.01, self.gamma, dim)
+        sig = np.linspace(0, self.sigma, dim)
+        Y_y_s = np.array([[0 for x in range(dim)] for x in range(dim)])
+
+        for i in range(1, dim):
+            for j in range(dim):
+                Y_y_s[i, j] = Vasicek(self.r0, self.T, self.zeta, gam[j], sig[i]).Y()
+        x, y = np.meshgrid(sig, gam)
+
+        fig = plt.figure(1, figsize=(12, 8))
+        axes = fig.gca(projection='3d')
+        plt.title("Surface Yield with respect to Gamma & Sigma")
+        plt.ylabel("Sigma")
+        plt.xlabel("Gamma")
+        axes.plot_surface(x, y, Y_y_s)
+        plt.show()
+
+
+
+
+#########################################################################
+##                            INITIALIZATION                           ##
+#########################################################################
+r0 = 0.05
+T = 10
+zeta = 0.25 * 0.03
+gamma = 0.25
+sigma = 0.02
+
+#########################################################################
+##                            PROGRAM                                  ##
+#########################################################################
+
+##                            INITIALIZATION                            ##
+J = np.ones((10, 3))
+d = []
+##                            CORE                                      ##
+
+
+
+##########################################################################
+##                            FIGURES                                   ##
+##########################################################################
+# Graph(r0, T, zeta, gamma, sigma).CourbeDesTaux([0.01, 0.02, 0.035, 0.05])
+# Graph(r0, 30, zeta, gamma, sigma).CourbeHumpeShape()
+# Surface(r0=1, T=30, zeta=0.25*0.03, gamma=0.25, sigma=0.02).Yield_r_T(dim=100)
+# Surface(r0=0.1, T=10, zeta=0.1, gamma=0.5, sigma=0.02).Yield_y_n(dim=10)
+# Surface(r0=0.1, T=10, zeta=0.02, gamma=0.5, sigma=0.1).Yield_y_s(dim=10)
 
